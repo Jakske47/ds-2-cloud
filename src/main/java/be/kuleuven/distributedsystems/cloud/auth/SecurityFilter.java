@@ -1,6 +1,9 @@
 package be.kuleuven.distributedsystems.cloud.auth;
 
 import be.kuleuven.distributedsystems.cloud.entities.User;
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.interfaces.DecodedJWT;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -12,6 +15,7 @@ import org.springframework.web.util.WebUtils;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -27,12 +31,14 @@ public class SecurityFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         var session = WebUtils.getCookie(request, "session");
         if (session != null) {
-            // TODO: (level 1) decode Identity Token and assign correct email and role
-            // TODO: (level 2) verify Identity Token
-            var user = new User("test@example.com", "");
-
+            String idToken = session.getValue();
+            var mail = JWT.decode(idToken).getClaim("email");
+            var roles = JWT.decode((idToken)).getClaim("roles");
+            var user = new User(mail.asString(), roles.asString());
             SecurityContext context = SecurityContextHolder.getContext();
             context.setAuthentication(new FirebaseAuthentication(user));
+            // TODO: (level 2) verify Identity Token
+
         }
         filterChain.doFilter(request, response);
     }
